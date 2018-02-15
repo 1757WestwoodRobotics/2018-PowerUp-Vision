@@ -3,7 +3,7 @@ import numpy
 
 
 
-picture = take_picture(False, 1)
+picture = take_picture(True, 1)
 #hsv = cv2.cvtColor(picture, cv2.COLOR_BGR2HSV)
 
 picture=cv2.bilateralFilter(picture,10,150,150)
@@ -33,9 +33,10 @@ for row in range (0, rows-1, 1):
         #    if (abs(distance<1)):
         #        mask[row,col]=255
 
-        tar2 = 1.45 * color[0] + 48.4
-        tar3 = 1.31 * color[0] + 59.6
-        if abs(color[1] - tar2) < 50 and abs(color[2] - tar3) < 50:
+        ##THESE DONT REALLY WORK
+        tar2 = .0033 * (color[0] **2) + 0.223 *  color[0]  + 33.2
+        tar3 = .00451 * (color[0] **2) + .149 * color[0] + 43.8
+        if (abs(color[1] - tar2) < 30) and (abs(color[2] - tar3) < 30):
             mask[row, col] = 255
 
 
