@@ -55,7 +55,7 @@ def closest(row, col, coordinates_list):
 
 #######################################################################################################################
 
-#Given a picture reduced to true/false values (0=false, 255=true), and a row/col coordinate that describes a coordinate
+#Given a picture reduced to true/false values (0=false,  not zero=true), and a row/col coordinate that describes a coordinate
 # in said picture, and a search radius in pixels, this returns a list of all the row/col pairs
 # within that radius that are true. It does not return the original input pixel.
 
@@ -77,7 +77,7 @@ def in_range(picture, row, col, radius):
         check_row = coords_to_check[list_index][0]
         check_col = coords_to_check[list_index][1]
 
-        if (picture[check_row, check_col]==255) and not(check_row==row and check_col==col):
+        if (picture[check_row, check_col]!=0) and not(check_row==row and check_col==col):
             pixels_found_list.append(copy.copy([check_row, check_col]))
 
     return pixels_found_list
@@ -85,7 +85,7 @@ def in_range(picture, row, col, radius):
 #######################################################################################################################
 
 
-#Given a picture reduced to true/false values (0=false, 255=true), and a row/col coordinate that describes a coordinate
+#Given a picture reduced to true/false values (0=false, not 0 =true), and a row/col coordinate that describes a coordinate
 # in said picture, and a search radius in pixels, this sets all pixels within the radius of the original coordinate to
 # false.
 
@@ -108,7 +108,7 @@ def obliterate(picture, row, col, radius):
 
 #######################################################################################################################
 
-#Given a picture reduced to true/false values (0=false, 255=true), this sets all pixels otherwise surrounded by true
+#Given a picture reduced to true/false values (0=false, not 0 =true), this sets all pixels otherwise surrounded by true
 # pixels to false. Does not check the edges because that fringe problem is
 # probably not worth spending a bunch of time and cpu to fix.
 
@@ -161,8 +161,8 @@ class object_info_class(object):
 
             return norm_x, norm_y
 
-        def area(self):
-            return (self.max_row[0]-self.min_row[0]+1)*(self.max_col[1]-self.min_col[1]+1)
+        def relative_area(self):
+            return float((self.max_row[0]-self.min_row[0]+1)*(self.max_col[1]-self.min_col[1]+1)/(1.0*self.source_dimensions[0]*self.source_dimensions[1]))
 
         def aspect_ratio(self):
             return float(self.max_row[0]-self.min_row[0]+1)/(self.max_col[1]-self.min_col[1]+1)
@@ -189,7 +189,7 @@ def find_objects(picture, search_radius):
     for row in range(0, rows-1, 1):
         for col in range(0, cols-1, 1):
 
-            if working_image[row, col] == 255:
+            if working_image[row, col] != 0:
 
                 pixel_found=True
                 object_info.max_row=[row, col]
@@ -356,7 +356,7 @@ def altAzi(normx, normy, horizontal_angle, vertical_angle):
 #######################################################################################################################
 
 #sorts a list of text outputs based on a parameter for easy viewing. Sorts largest to smallest.
-# 0 is sort by area
+# 0 is sort by relative area
 # 1 is aspect ratio
 # 2 is perimeter
 
@@ -375,8 +375,8 @@ def sort_object_info_list(unsorted_list, sort_by):
         while found==False:
 
             if sort_by==0:
-                unsorted_value=unsorted_list[unsorted_index].area()
-                sorted_value=sorted_list[sorted_index].area()
+                unsorted_value=unsorted_list[unsorted_index].relative_area()
+                sorted_value=sorted_list[sorted_index].relative_area()
             elif sort_by == 1:
                 unsorted_value = unsorted_list[unsorted_index].aspect_ratio()
                 sorted_value = sorted_list[sorted_index].aspect_ratio()
@@ -430,7 +430,7 @@ def get_pixel_values(picture):
 
             if (abs_row<rows and abs_col<cols):
                 working=copy.copy(picture)
-                cv2.circle(working,(abs_col,abs_row),5,(0,0,0),1)
+                cv2.circle(working,(abs_col,abs_row),5,(0,0,255),1)
                 cv2.imshow("location", working)
                 cv2.waitKey(100)
                 print(picture[abs_row, abs_col])

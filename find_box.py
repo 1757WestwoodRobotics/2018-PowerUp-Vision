@@ -53,16 +53,16 @@ mask=remove_spurious_falses(mask,3)
 #show_picture("post chatter",mask,5000)
 
 objects_list = find_objects(mask, 5)
-objects_list = sort_object_info_list(objects_list, 1)
+objects_list = sort_object_info_list(objects_list, 0)
 
 for i in objects_list:
-    row, col = i.center
-    x, y = centerCoordinates(mask, row, col)
-    x, y = normalizeCoordinatesI(mask, x, y)
+    #row, col = i.center
+    #x, y = centerCoordinates(mask, row, col)
+    x, y = i.normalized_center()
     alt, azimuth = altAzi(x,y,22.5,23)
-    area= i.area()
+    area= i.relative_area()
     aspect_ratio = i.aspect_ratio()
-    print ("Alt: ", round(alt,2), "Azimuth: ", round(azimuth,2), "Area: ", area, "Aspect Ratio: ", round(aspect_ratio,2), "Perimeter: ", i.perimeter)
+    print ("Alt: ", round(alt,2), "Azimuth: ", round(azimuth,2), "Relative Area: ", round(area,3), "Aspect Ratio: ", round(aspect_ratio,2), "Perimeter: ", i.perimeter)
 
 
 
