@@ -1,5 +1,4 @@
 # file last changed on 10February2018
-
 import numpy
 import cv2
 import time
