@@ -1,6 +1,6 @@
 from westwood_vision_tools import *
 import numpy
-from publish_data import *
+#from publish_data import *
 
 ##################################################################################################################
 # given an object list of what is supposed to be boxes, this checks the list and removes objects
@@ -18,7 +18,7 @@ def check_box_object_list(list_in):
             list_out.pop(index)
         elif (list_out[index].aspect_ratio() >1.25):
             list_out.pop(index)
-        elif (list_out[index].relative_area()<0.00015):
+        elif (list_out[index].relative_area()<0.00015): # require a minimum size
             list_out.pop(index)
         else:
             index+=1
@@ -57,7 +57,8 @@ def report_box_info_to_jetson(box_info):
 
 picture = take_picture(False, 1)
 
-picture=cv2.res(picture, (0,0), fx=0.5, fy=0.5)
+#if this is too slow, make the picture smaller
+#picture=cv2.resize(picture, (0,0), fx=0.5, fy=0.5)
 
 #hsv = cv2.cvtColor(picture, cv2.COLOR_BGR2HSV)
 
@@ -69,18 +70,23 @@ picture=cv2.bilateralFilter(picture,10,150,150)
 
 rows, cols, layers = picture.shape
 
-
 #create an intial mask where evertying is false
 mask=numpy.zeros((rows,cols),numpy.uint8)
 
+#check each pixel and determine if it's color profile is that of a box
 for row in range (0, rows-1, 1):
     for col in range (0, cols-1, 1):
         color=picture[row,col]
 
-        tar2 = 1.45 * color[0] + 48.4
-        tar3 = 1.31 * color[0] + 59.6
-        if abs(color[1] - tar2) < 50 and abs(color[2] - tar3) < 50:
-            mask[row, col] = 255
+        # if the value of the 1st component is within the expected range
+        # then check the other two color components
+        if ((color[0]>10) and (color[0]<160)):
+            # given the value of the first color component, calculate what
+            # the other two should be if this is a box
+            tar2 = 1.45 * color[0] + 48.4
+            tar3 = 1.31 * color[0] + 59.6
+            if abs(color[1] - tar2) < 50 and abs(color[2] - tar3) < 50:
+                mask[row, col] = 255
 
 
 #show_picture("first",picture,5000)
@@ -89,8 +95,8 @@ for row in range (0, rows-1, 1):
 #high= numpy.array([255, 255,255])
 #mask = cv2.inRange(picture, low, high)
 
-mask=remove_chatter(mask,10)
-mask=remove_spurious_falses(mask,3)
+mask=remove_chatter(mask,5)
+mask=remove_spurious_falses(mask,5)
 
 #show_picture("post chatter",mask,5000)
 
@@ -110,7 +116,7 @@ for i in object_list:
     area= i.relative_area()
     aspect_ratio = i.aspect_ratio()
     distance=distance_to_box_meters(i)
-    report_box_info_to_jetson(i)
+  #  report_box_info_to_jetson(i)
     print ("Alt: ", round(alt,2), "Azimuth: ", round(azimuth,2), "Relative Area: ", round(area,4), "Aspect Ratio: ", round(aspect_ratio,2), "Perimeter: ", i.perimeter, "Distance, m: ", round(distance,3))
 
 
