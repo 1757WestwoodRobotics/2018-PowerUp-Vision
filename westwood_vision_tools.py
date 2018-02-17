@@ -372,7 +372,7 @@ def sort_object_info_list(unsorted_list, sort_by):
         found=False
         sorted_index=0
 
-        while found==False:
+        while found==False: 
 
             if sort_by==0:
                 unsorted_value=unsorted_list[unsorted_index].relative_area()
