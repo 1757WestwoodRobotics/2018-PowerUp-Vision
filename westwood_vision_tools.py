@@ -172,7 +172,7 @@ class object_info_class(object):
 # by tracing their outlines with accuracy of search_radius, and
 # returns a list (object_info_list) of 'object_info_class'
 
-def find_objects(picture, search_radius):
+def find_objects(picture, search_radius, animate):
     object_info = object_info_class()
     object_info_list = []
 
@@ -218,9 +218,10 @@ def find_objects(picture, search_radius):
                     elif check_col<object_info.min_col[1]:
                         object_info.min_col=[check_row,check_col]
 
-                    working_image[check_row,check_col] = 0
-                    cv2.imshow("working", working_image)
-                    cv2.waitKey(1)
+                    if (animate!=0):
+                        working_image[check_row,check_col] = 0
+                        cv2.imshow("working", working_image)
+                        cv2.waitKey(1)
 
                     # find all the pixels within a radius
                     close_by=in_range(working_image,check_row,check_col, search_radius)

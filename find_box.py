@@ -1,7 +1,59 @@
 from westwood_vision_tools import *
 import numpy
+from publish_data import *
+
+##################################################################################################################
+# given an object list of what is supposed to be boxes, this checks the list and removes objects
+# from the list that are not likely to be boxes
+
+def check_box_object_list(list_in):
+
+    list_out=copy.copy(list_in)
+
+    index=0
+    while index<len(list_out):
+
+        # the box is square and should have an aspect ratio near 1
+        if (list_out[index].aspect_ratio() < 0.75):
+            list_out.pop(index)
+        elif (list_out[index].aspect_ratio() >1.25):
+            list_out.pop(index)
+        elif (list_out[index].relative_area()<0.00015):
+            list_out.pop(index)
+        else:
+            index+=1
+
+    return list_out
+
+######################################################################################################################
+# this attempts to figure out the distance to the box in meters based on how much of the relative area it consumes,
+# this is is very dependent on the camera being used
+
+def distance_to_box_meters(box_object_info):
+
+    area=box_object_info.relative_area()
+    distance_meters=0.429*numpy.power(area,-0.443)
+
+    return distance_meters
+
+######################################################################################################################
+
+def report_box_info_to_jetson(box_info):
+
+    x, y = box_info.normalized_center()
+    alt, azimuth = altAzi(x, y, 22.5, 23)
+    area = box_info.relative_area()
+    aspect_ratio = box_info.aspect_ratio()
+    distance = distance_to_box_meters(box_info)
+
+    publish_network_value("altitude", alt)
+    publish_network_value("azimuth",  azimuth)
+    publish_network_value("distance, m",  distance)
 
 
+######################################################################################################################
+
+#init_network_tables()
 
 picture = take_picture(False, 1)
 #hsv = cv2.cvtColor(picture, cv2.COLOR_BGR2HSV)
@@ -41,10 +93,8 @@ for row in range (0, rows-1, 1):
 
 #show_picture("first",picture,5000)
 
-#low=  numpy.array([20, 60,60])
-#high= numpy.array([70, 100,100])
-low=  numpy.array([255, 255,255])
-high= numpy.array([255, 255,255])
+#low=  numpy.array([255, 255,255])
+#high= numpy.array([255, 255,255])
 #mask = cv2.inRange(picture, low, high)
 
 mask=remove_chatter(mask,10)
@@ -52,18 +102,27 @@ mask=remove_spurious_falses(mask,3)
 
 #show_picture("post chatter",mask,5000)
 
-objects_list = find_objects(mask, 5)
-objects_list = sort_object_info_list(objects_list, 0)
+object_list = find_objects(mask, 5, True)
 
-for i in objects_list:
+# remove items from the list that are probably just noise or not boxes
+object_list=check_box_object_list(object_list)
+
+
+objects_list = sort_object_info_list(object_list, 0)
+
+
+
+for i in object_list:
     #row, col = i.center
     #x, y = centerCoordinates(mask, row, col)
     x, y = i.normalized_center()
     alt, azimuth = altAzi(x,y,22.5,23)
     area= i.relative_area()
     aspect_ratio = i.aspect_ratio()
-    print ("Alt: ", round(alt,2), "Azimuth: ", round(azimuth,2), "Relative Area: ", round(area,3), "Aspect Ratio: ", round(aspect_ratio,2), "Perimeter: ", i.perimeter)
+    distance=distance_to_box_meters(i)
+    report_box_info_to_jetson(i)
+    print ("Alt: ", round(alt,2), "Azimuth: ", round(azimuth,2), "Relative Area: ", round(area,4), "Aspect Ratio: ", round(aspect_ratio,2), "Perimeter: ", i.perimeter, "Distance, m: ", round(distance,3))
 
 
 
-
+#
