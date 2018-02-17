@@ -2,7 +2,7 @@ from networktables import NetworkTables
 
 
 def init_network_tables():
-    NetworkTables.initialize(server='127.0.0.1')
+    NetworkTables.initialize(server='10.17.57.2')    # Use 127.0.0.1 for local testing, 10.17.57.2 for roboRIO
     global table
     table = NetworkTables.getTable('Jetson')
 
