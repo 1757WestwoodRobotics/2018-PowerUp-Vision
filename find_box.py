@@ -56,6 +56,9 @@ def report_box_info_to_jetson(box_info):
 #init_network_tables()
 
 picture = take_picture(False, 1)
+
+picture=cv2.res(picture, (0,0), fx=0.5, fy=0.5)
+
 #hsv = cv2.cvtColor(picture, cv2.COLOR_BGR2HSV)
 
 picture=cv2.bilateralFilter(picture,10,150,150)
@@ -66,24 +69,13 @@ picture=cv2.bilateralFilter(picture,10,150,150)
 
 rows, cols, layers = picture.shape
 
+
 #create an intial mask where evertying is false
 mask=numpy.zeros((rows,cols),numpy.uint8)
 
 for row in range (0, rows-1, 1):
     for col in range (0, cols-1, 1):
         color=picture[row,col]
-        #target_ratio=[]
-
-        #if (color[1]>20 and color[1]<60):
-         #   target_ratio = numpy.array([2.56, 2.41])
-        #elif (color[1]>=60 and color[1]<120):
-        #    target_ratio=numpy.array([2.0, 1.8])
-
-        #if len(target_ratio)>0:
-        #    pixel_ratio=numpy.array([(float(1.0*color[1]/color[0])), float((1.0*color[2]/color[0]))])
-        #    distance=euclidian_distance(target_ratio, pixel_ratio)
-        #    if (abs(distance<1)):
-        #        mask[row,col]=255
 
         tar2 = 1.45 * color[0] + 48.4
         tar3 = 1.31 * color[0] + 59.6
@@ -107,9 +99,7 @@ object_list = find_objects(mask, 5, True)
 # remove items from the list that are probably just noise or not boxes
 object_list=check_box_object_list(object_list)
 
-
 objects_list = sort_object_info_list(object_list, 0)
-
 
 
 for i in object_list:
