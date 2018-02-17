@@ -166,13 +166,40 @@ class object_info_class(object):
         def aspect_ratio(self):
             return float(self.max_row[0]-self.min_row[0]+1)/(self.max_col[1]-self.min_col[1]+1)
 
+        def relative_width(self):
+            return float((self.max_col[1] - self.min_col[1] + 1) / (1.0 * self.source_dimensions[1]))
+
+        def relative_height(self):
+            return float((self.max_row[0] - self.min_row[0] + 1) / (1.0 * self.source_dimensions[0]))
+
+        def relative_center_row(self):
+            return float(1.0*self.center_RC[0]/self.source_dimensions[0])
+
+        def relative_center_col(self):
+            return float(1.0*self.center_RC[1]/self.source_dimensions[1])
+
+        def relative_min_row(self):
+            return float(1.0*self.min_row[0]/self.source_dimensions[0])
+
+        def relative_min_col(self):
+            return float(1.0*self.min_row[1]/self.source_dimensions[1])
+
+        def relative_max_row(self):
+            return float(1.0*self.max_row[0]/self.source_dimensions[0])
+
+        def relative_max_col(self):
+            return float(1.0*self.max_col[1]/self.source_dimensions[1])
+
+
+
+
 #######################################################################################################################
 
 # Given a true/false bitmap and a search radius, this locates discrete blobs
 # by tracing their outlines with accuracy of search_radius, and
 # returns a list (object_info_list) of 'object_info_class'
 
-def find_objects(picture, search_radius):
+def find_objects(picture, search_radius, animate):
     object_info = object_info_class()
     object_info_list = []
 
@@ -218,9 +245,10 @@ def find_objects(picture, search_radius):
                     elif check_col<object_info.min_col[1]:
                         object_info.min_col=[check_row,check_col]
 
-                    working_image[check_row,check_col] = 0
-                    cv2.imshow("working", working_image)
-                    cv2.waitKey(1)
+                    if (animate!=0):
+                        working_image[check_row,check_col] = 0
+                        cv2.imshow("working", working_image)
+                        cv2.waitKey(1)
 
                     # find all the pixels within a radius
                     close_by=in_range(working_image,check_row,check_col, search_radius)
