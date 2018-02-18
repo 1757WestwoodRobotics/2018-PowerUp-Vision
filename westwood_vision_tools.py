@@ -245,8 +245,9 @@ def find_objects(picture, search_radius, animate):
                     elif check_col<object_info.min_col[1]:
                         object_info.min_col=[check_row,check_col]
 
+                    working_image[check_row, check_col] = 0
+
                     if (animate!=0):
-                        working_image[check_row,check_col] = 0
                         cv2.imshow("working", working_image)
                         cv2.waitKey(1)
 
