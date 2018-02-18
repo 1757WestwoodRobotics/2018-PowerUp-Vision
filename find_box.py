@@ -101,9 +101,9 @@ def search_for_boxes(picture_in, acceleration, animate):
             if ((color[0]>10) and (color[0]<80)):
                 # given the value of the first color component, calculate what
                 # the other two should be if this is a box
-                tar2 = -.00229 * (color[0] ** 2) + 1.83 * color[0] + 34.2
-                tar3 = -.00517 * (color[0] ** 2) + 2.2 * color[0] + 25.7
-                if (abs(color[1] - tar2) < 40) and (abs(color[2] - tar3) < 40):
+                tar1 = .971 * color[1] - 59.9
+                tar3 = .65 * color[1] + 31.4
+                if (abs(color[0] - tar1) < 40) and (abs(color[2] - tar3) < 40):
                     mask[row, col] = 255
 
 
