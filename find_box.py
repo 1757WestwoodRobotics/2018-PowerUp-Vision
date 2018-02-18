@@ -14,11 +14,7 @@ def check_box_object_list(list_in):
     while index<len(list_out):
 
         # the box is square and should have an aspect ratio near 1
-        if (list_out[index].aspect_ratio() < 0.5):
-            list_out.pop(index)
-        elif (list_out[index].aspect_ratio() >1.5):
-            list_out.pop(index)
-        elif (list_out[index].relative_area()<0.00015): # require a minimum size
+        if (list_out[index].relative_area()<0.00015): # require a minimum size
             list_out.pop(index)
         else:
             index+=1
@@ -59,6 +55,7 @@ def search_for_boxes(picture_in, acceleration, animate):
 
     picture_out=copy.copy(picture_in)
 
+
     original_rows, original_cols, layers = picture_in.shape
 
     # remove pixels that aren't
@@ -98,12 +95,12 @@ def search_for_boxes(picture_in, acceleration, animate):
 
             # if the value of the 1st component is within the expected range
             # then check the other two color components
-            if ((color[0]>10) and (color[0]<80)):
+            if ((color[1]>50) and (color[1]<210)):
                 # given the value of the first color component, calculate what
                 # the other two should be if this is a box
-                tar1 = .971 * color[1] - 59.9
-                tar3 = .65 * color[1] + 31.4
-                if (abs(color[0] - tar1) < 40) and (abs(color[2] - tar3) < 40):
+                tar1 = .0055 * color[1]**2 - .641 * color[1] + 53.1
+                tar3 = .83 * color[1] + 9.11
+                if (abs(color[0] - tar1) < 24) and (abs(color[2] - tar3) < 24):
                     mask[row, col] = 255
 
 
@@ -170,6 +167,9 @@ def search_for_boxes(picture_in, acceleration, animate):
 
 ###################################################################################################
 
-picture = take_picture(True, 1)
-searched=search_for_boxes(picture,0, True)
+picture = take_picture(False, 1)
+start_time=time.time()
+searched=search_for_boxes(picture,10, False)
+stop_time=time.time()
+print(stop_time-start_time)
 show_picture("processed",searched,10000)

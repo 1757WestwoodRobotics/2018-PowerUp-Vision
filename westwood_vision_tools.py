@@ -3,7 +3,7 @@ import numpy
 import cv2
 import time
 import copy
-
+import PyWinMouse
 
 #######################################################################################################################
 
@@ -68,8 +68,8 @@ def in_range(picture, row, col, radius):
         for check_col in range(col-radius, col+radius, 1):
             # makes sure pixel is within bounds of picture
             if ((check_row >= 0) and (check_col>=0) and (check_row<rows) and (check_col<cols)):
-                 distance = numpy.sqrt((row-check_row)**2 + (col-check_col)**2)
-                 if distance<=radius+0.5:
+                distance = numpy.sqrt((row - check_row) ** 2 + (col - check_col) ** 2)
+                if distance<=radius+0.5:
                      coords_to_check.append(copy.copy([check_row, check_col]))
 
     for list_index in range(0, len(coords_to_check), 1):
@@ -99,7 +99,7 @@ def obliterate(picture, row, col, radius):
         for check_col in range(col - radius, col + radius, 1):
              #makes sure pixel is within bounds of picture
              if ((check_row<rows) and (check_col<cols)) and (check_row>=0 and check_col>=0):
-                 distance = numpy.sqrt((check_row-row)**2 + (check_col-col)**2)
+                 distance = numpy.sqrt((row - check_row) ** 2 + (col - check_col) ** 2)
                  if distance<=radius:
                      return_picture[check_row, check_col]=0
 
@@ -115,20 +115,22 @@ def hollow_out(picture):
 
     working=copy.copy(picture)
 
-    rows, cols = working.shape
+    kernel=numpy.ones((2,2),numpy.uint8)
+    working=cv2.morphologyEx(working,cv2.MORPH_GRADIENT,kernel)
 
-    for row in range(1, rows - 2, 1):
-        for col in range(1, cols - 2, 1):
-            if (picture[row,col]==255):
-                if(picture[row,col-1]==255):
-                    if(picture[row,col+1]==255):
-                        if(picture[row-1,col]==255):
-                            if(picture[row-1,col-1]==255):
-                                if(picture[row-1,col+1]==255):
-                                    if(picture[row+1,col]==255):
-                                        if(picture[row+1,col-1]==255):
-                                            if(picture[row+1,col+1]==255):
-                                                working[row,col]=0
+#    rows, cols = working.shape
+#    for row in range(1, rows - 2, 1):
+#        for col in range(1, cols - 2, 1):
+#            if (picture[row,col]==255):
+#                if(picture[row,col-1]==255):
+#                    if(picture[row,col+1]==255):
+#                        if(picture[row-1,col]==255):
+#                           if(picture[row-1,col-1]==255):
+#                                if(picture[row-1,col+1]==255):
+#                                   if(picture[row+1,col]==255):
+#                                      if(picture[row+1,col-1]==255):
+#                                        if(picture[row+1,col+1]==255):
+#                                               working[row,col]=0
 
 
 
@@ -434,36 +436,46 @@ def sort_object_info_list(unsorted_list, sort_by):
 # this is intended as a tool to held with object identification
 # to exit the function, the user enters a negative X location
 
-
 def get_pixel_values(picture):
 
     [rows, cols, depth] = picture.shape
 
     run_again=True
+    rel_row = 50
+    rel_col = 50
+
+    old_col, old_row = PyWinMouse.Mouse().get_mouse_pos()
 
     while run_again:
-        print("Input X, Y as 0-100%:")
-        rel_col, rel_row = input()
+        time.sleep(0.25)
 
-        if (rel_col>0):
-            #convert from relative position to absolute row and colmn
-            rel_col=float(1.0*rel_col/100)
-            abs_col=cols*rel_col
-            abs_col=int(abs_col)
+        new_col, new_row = PyWinMouse.Mouse().get_mouse_pos()
 
-            rel_row=float(1.0*rel_row/100)
-            rel_row=1-rel_row
-            abs_row=rows*rel_row
-            abs_row=int(abs_row)
+        rel_col=+0.25*(new_col-old_col)
+        rel_row=+0.25*(new_row-old_row)
 
-            if (abs_row<rows and abs_col<cols):
-                working=copy.copy(picture)
-                cv2.circle(working,(abs_col,abs_row),5,(0,0,255),1)
-                cv2.imshow("location", working)
-                cv2.waitKey(100)
-                print(picture[abs_row, abs_col])
-        else:
-            run_again = False
+        if (rel_row<0):
+            rel_row=0
+        elif rel_row>100:
+            rel_row=100
+
+        if (rel_col<0):
+            rel_col=0
+        elif rel_col>100:
+            rel_col=100
+
+        #convert from relative position to absolute row and colmn
+        abs_col=int(cols*1.0*rel_col/100)
+
+        abs_row=int(rows*1.0*rel_row/100)
+
+        print(abs_row, abs_col)
+        if (abs_row>=0 and abs_row<rows and abs_col>=0 and abs_col<cols):
+             working=copy.copy(picture)
+             cv2.circle(working,(abs_col,abs_row),5,(0,0,255),2)
+             cv2.imshow("location", working)
+             cv2.waitKey(10)
+             print(picture[abs_row, abs_col])
 
 
 #######################################################################################################################
