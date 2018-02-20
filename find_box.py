@@ -14,7 +14,9 @@ def check_box_object_list(list_in):
     while index<len(list_out):
 
         # the box is square and should have an aspect ratio near 1
-        if (list_out[index].relative_area()<0.00015): # require a minimum size
+        if (list_out[index].aspect_ratio > 1.3 or list_out[index].aspect_ratio < .75) and (list_out[index].relative_area()<0.003): # require a minimum size
+            list_out.pop(index)
+        elif (list_out[index].aspect_ratio < 1.75 or list_out[index].aspect_ratio > 2.3) and (list_out[index].relative_area()<0.006):
             list_out.pop(index)
         else:
             index+=1
@@ -95,12 +97,12 @@ def search_for_boxes(picture_in, acceleration, animate):
 
             # if the value of the 1st component is within the expected range
             # then check the other two color components
-            if ((color[1]>50) and (color[1]<210)):
+            if ((color[1]>65) and (color[1]<210) and (color[2] < 180)):
                 # given the value of the first color component, calculate what
                 # the other two should be if this is a box
                 tar1 = .0055 * color[1]**2 - .641 * color[1] + 53.1
                 tar3 = .83 * color[1] + 9.11
-                if (abs(color[0] - tar1) < 24) and (abs(color[2] - tar3) < 24):
+                if (abs(color[0] - tar1) < 21) and (abs(color[2] - tar3) < 21):
                     mask[row, col] = 255
 
 
@@ -167,9 +169,16 @@ def search_for_boxes(picture_in, acceleration, animate):
 
 ###################################################################################################
 
-picture = take_picture(False, 1)
-start_time=time.time()
-searched=search_for_boxes(picture,10, False)
-stop_time=time.time()
-print(stop_time-start_time)
-show_picture("processed",searched,10000)
+#picture = take_picture(False, 1)
+#picture = cv2.imread("C:\Users/20jgrassi\Pictures\Camera Roll\edited.jpg")
+
+cap = cv2.VideoCapture(1)
+#cap.set(cv2.CAP_PROP_SETTINGS, 1) #to fix things
+while True:
+
+    picture = take_picture2(cap)
+    #start_time = time.time()
+    searched=search_for_boxes(picture,10, False)
+    #stop_time=time.time()
+    #print(stop_time-start_time)
+    show_picture("processed",searched,10)
