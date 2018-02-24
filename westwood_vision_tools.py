@@ -194,7 +194,7 @@ class object_info_class(object):
             return float(1.0*self.min_row[0]/self.source_dimensions[0])
 
         def relative_min_col(self):
-            return float(1.0*self.min_row[1]/self.source_dimensions[1])
+            return float(1.0*self.min_col[1]/self.source_dimensions[1])
 
         def relative_max_row(self):
             return float(1.0*self.max_row[0]/self.source_dimensions[0])

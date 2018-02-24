@@ -3,6 +3,45 @@ import numpy
 #from publish_data import *
 
 ##################################################################################################################
+# this gets rid of a "box" if it is entirely within the area of another box
+
+def remove_box_in_a_box(list_in):
+
+    list_out=copy.copy(list_in)
+
+    # do one pass then reverse the list and do another
+    # this addresses the a in b and b in a condition
+    for thing in range (0,2,1):
+        # start at the end of the list and work to the from
+        last_index=len(list_out)-1
+
+        while(last_index>0):
+            check_index=0
+            check_next=True
+            while (check_next):
+
+                check_object=list_out[check_index]
+                last_object=list_out[last_index]
+
+                if (check_object.relative_max_row()>last_object.relative_max_row() and
+                    check_object.relative_max_col()>last_object.relative_max_col() and
+                    check_object.relative_min_row()<last_object.relative_min_row() and
+                    check_object.relative_min_col()<last_object.relative_min_col()):
+                    list_out.pop(last_index)
+                    check_next=False
+                else:
+                    check_index+=1
+
+                if (check_index>=last_index):
+                    check_next=False
+
+            last_index-=1
+
+        list_out.reverse()
+
+    return list_out
+
+##################################################################################################################
 # given an object list of what is supposed to be boxes, this checks the list and removes objects
 # from the list that are not likely to be boxes
 
@@ -29,7 +68,15 @@ def check_box_object_list(list_in):
 
 def distance_to_box_meters(box_object_info):
 
+    # because several boxes could be pushed against each other, make a guess
+    # that aspect ratios of 2:1, 3:1 etc. are multiple boxes in a row
+    # this is very crude and assumes that the boxe aren't stacked
+    aspect_ratio=box_object_info.aspect_ratio()
+    if ((aspect_ratio>0) and (aspect_ratio<1)):
+        aspect_ratio/=1
+
     area=box_object_info.relative_area()
+    area=float(area/aspect_ratio)
     distance_meters=0.429*numpy.power(area,-0.443)
 
     return distance_meters
@@ -121,6 +168,7 @@ def search_for_boxes(picture_in, acceleration, animate):
 
     # remove items from the list that are probably just noise or not boxes
     object_list=check_box_object_list(object_list)
+    object_list=remove_box_in_a_box(object_list)
 
     object_list = sort_object_info_list(object_list, 0)
 
@@ -143,20 +191,20 @@ def search_for_boxes(picture_in, acceleration, animate):
             radius=int(abs_height/2)
         cv2.circle(picture_out, (abs_col, abs_row), radius, (0, 0, 255), 1)
 
-        height=int(i.relative_height()*original_rows)
-        min_row=int(i.relative_center_row()*original_rows-height/2)
-        max_row=int(i.relative_center_row()*original_rows+height/2)
-        width=int(i.relative_width()*original_cols)
-        min_col=int(i.relative_center_col()*original_cols-width/2)
-        max_col=int(i.relative_center_col()*original_cols+width/2)
-        cv2.rectangle(picture_out, (min_col, min_row), (max_col, max_row), (0, 0, 255), 2)
-
-        # I have no idea why this doesn't work
-        #min_row=int(i.relative_min_row()*original_rows)
-        #min_col=int(i.relative_min_col()*original_cols)
-        #max_row=int(i.relative_max_row()*original_rows)
-        #max_col=int(i.relative_max_col()*original_cols)
+        #height=int(i.relative_height()*original_rows)
+        #min_row=int(i.relative_center_row()*original_rows-height/2)
+        #max_row=int(i.relative_center_row()*original_rows+height/2)
+        #width=int(i.relative_width()*original_cols)
+        #min_col=int(i.relative_center_col()*original_cols-width/2)
+        #max_col=int(i.relative_center_col()*original_cols+width/2)
         #cv2.rectangle(picture_out, (min_col, min_row), (max_col, max_row), (0, 0, 255), 2)
+
+        # draw a box around the object
+        min_row=int(i.relative_min_row()*original_rows)
+        min_col=int(i.relative_min_col()*original_cols)
+        max_row=int(i.relative_max_row()*original_rows)
+        max_col=int(i.relative_max_col()*original_cols)
+        cv2.rectangle(picture_out, (min_col, min_row), (max_col, max_row), (0, 0, 255), 2)
         #cv2.rectangle(picture_out, (100, 200), (200, 400), (0, 0, 255), 2)
 
         print ("Alt: ", round(alt,2), "Azimuth: ", round(azimuth,2), "Relative Area: ", round(area,4), "Aspect Ratio: ", round(aspect_ratio,2), "Perimeter: ", i.perimeter, "Distance, m: ", round(distance,3))
