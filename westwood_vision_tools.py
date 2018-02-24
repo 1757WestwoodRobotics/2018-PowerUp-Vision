@@ -191,7 +191,7 @@ class object_info_class(object):
             return float(1.0*self.center_RC[1]/self.source_dimensions[1])
 
         def relative_min_row(self):
-            return float(1.0*self.min_row[0]/self.source_dimensions[0])   
+            return float(1.0*self.min_row[0]/self.source_dimensions[0])
 
         def relative_min_col(self):
             return float(1.0*self.min_col[1]/self.source_dimensions[1])
@@ -206,7 +206,35 @@ class object_info_class(object):
 
 
 #######################################################################################################################
+# this is a faster version of find_objects
 
+def find_objects_fast(picture):
+
+    object_info = object_info_class()
+    object_info_list = []
+
+    rows, cols = picture.shape
+
+    # find the contours - regions of white - in the image
+    im2, contours, hierarchy = cv2.findContours(picture, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    for contour in contours:
+        object_info.source_dimensions = [rows, cols]
+        object_info.perimeter=cv2.arcLength(contour,True)
+
+        object_info.max_row=tuple(contour[contour[:,:,1].argmax()][0])
+        object_info.max_col=tuple(contour[contour[:,:,0].argmax()][0])
+        object_info.min_row=tuple(contour[contour[:,:,1].argmin()][0])
+        object_info.min_col=tuple(contour[contour[:,:,0].argmin()][0])
+
+        x, y, w, h = cv2.boundingRect(contour)
+        object_info.center_RC = [y + (h / 2), x + (w / 2)]
+
+        object_info_list.append(object_info)
+
+    return object_info_list
+
+#######################################################################################################################
 # Given a true/false bitmap and a search radius, this locates discrete blobs
 # by tracing their outlines with accuracy of search_radius, and
 # returns a list (object_info_list) of 'object_info_class'
@@ -479,7 +507,6 @@ def get_pixel_values(picture):
 
         abs_row=int(rows*1.0*rel_row/100)
 
-        print(abs_row, abs_col)
         if (abs_row>=0 and abs_row<rows and abs_col>=0 and abs_col<cols):
              working=copy.copy(picture)
              cv2.circle(working,(abs_col,abs_row),5,(0,0,255),2)

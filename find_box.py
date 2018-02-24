@@ -72,12 +72,16 @@ def distance_to_box_meters(box_object_info):
     # that aspect ratios of 2:1, 3:1 etc. are multiple boxes in a row
     # this is very crude and assumes that the boxe aren't stacked
     aspect_ratio=box_object_info.aspect_ratio()
+
     if ((aspect_ratio>0) and (aspect_ratio<1)):
         aspect_ratio/=1
 
-    area=box_object_info.relative_area()
-    area=float(area/aspect_ratio)
-    distance_meters=0.429*numpy.power(area,-0.443)
+    if (aspect_ratio>0):
+        area = box_object_info.relative_area()
+        area=float(area/aspect_ratio)
+        distance_meters=0.429*numpy.power(area,-0.443)
+    else:
+        distance_meters=-1
 
     return distance_meters
 
@@ -104,7 +108,6 @@ def search_for_boxes(picture_in, acceleration, animate):
 
     picture_out=copy.copy(picture_in)
 
-
     original_rows, original_cols, layers = picture_in.shape
 
     # remove pixels that aren't
@@ -125,49 +128,43 @@ def search_for_boxes(picture_in, acceleration, animate):
     else:
         working_picture=copy.copy(picture_in)
 
-    #hsv = cv2.cvtColor(picture, cv2.COLOR_BGR2HSV)
-
     working_picture=cv2.bilateralFilter(working_picture,10,150,150)
-    #hsv=cv2.bilateralFilter(hsv,10,150,150)
-    #show_picture("original",picture,2000)
-    #show_picture("hsv",hsv,2000)
 
     working_rows, working_cols, layers = working_picture.shape
 
-    #create an intial mask where evertying is false
-    mask=numpy.zeros((working_rows,working_cols),numpy.uint8)
+    run_fast=False
 
-    #check each pixel and determine if it's color profile is that of a box
-    for row in range (0, working_rows-1, 1):
-        for col in range (0, working_cols-1, 1):
-            color=working_picture[row,col]
+    if run_fast:
+        mask = cv2.inRange(working_picture, (0, 100, 150), (100, 255, 255))
+    else:
+        # create an intial mask where evertying is false
+        mask = numpy.zeros((working_rows, working_cols), numpy.uint8)
 
-            # if the value of the 1st component is within the expected range
-            # then check the other two color components
-            if ((color[1]>65) and (color[1]<210) and (color[2] < 180)):
-                # given the value of the first color component, calculate what
-                # the other two should be if this is a box
-                tar1 = .0055 * color[1]**2 - .641 * color[1] + 53.1
-                tar3 = .83 * color[1] + 9.11
-                if (abs(color[0] - tar1) < 21) and (abs(color[2] - tar3) < 21):
-                    mask[row, col] = 255
+        #check each pixel and determine if it's color profile is that of a box
+        for row in range (0, working_rows-1, 1):
+            for col in range (0, working_cols-1, 1):
+                color=working_picture[row,col]
 
-
-    #show_picture("first",picture,5000)
-
-    #low=  numpy.array([255, 255,255])
-    #high= numpy.array([255, 255,255])
-    #mask = cv2.inRange(picture, low, high)
+                # if the value of the 1st component is within the expected range
+                # then check the other two color components
+                if ((color[1]>65) and (color[1]<210) and (color[2] < 180)):
+                    # given the value of the first color component, calculate what
+                    # the other two should be if this is a box
+                    tar1 = .0055 * color[1]**2 - .641 * color[1] + 53.1
+                    tar3 = .83 * color[1] + 9.11
+                    if (abs(color[0] - tar1) < 21) and (abs(color[2] - tar3) < 21):
+                        mask[row, col] = 255
 
     mask=remove_chatter(mask,chatter_size)
     mask=remove_spurious_falses(mask,engorge_size)
 
-    #show_picture("post chatter",mask,5000)
-
-    object_list = find_objects(mask, 3, animate)
+    if run_fast:
+        object_list = find_objects_fast(mask)
+    else:
+        object_list = find_objects(mask, 3, animate)
 
     # remove items from the list that are probably just noise or not boxes
-    object_list=check_box_object_list(object_list)
+    #object_list=check_box_object_list(object_list)
     object_list=remove_box_in_a_box(object_list)
 
     object_list = sort_object_info_list(object_list, 0)
@@ -191,23 +188,14 @@ def search_for_boxes(picture_in, acceleration, animate):
             radius=int(abs_height/2)
         cv2.circle(picture_out, (abs_col, abs_row), radius, (0, 0, 255), 1)
 
-        #height=int(i.relative_height()*original_rows)
-        #min_row=int(i.relative_center_row()*original_rows-height/2)
-        #max_row=int(i.relative_center_row()*original_rows+height/2)
-        #width=int(i.relative_width()*original_cols)
-        #min_col=int(i.relative_center_col()*original_cols-width/2)
-        #max_col=int(i.relative_center_col()*original_cols+width/2)
-        #cv2.rectangle(picture_out, (min_col, min_row), (max_col, max_row), (0, 0, 255), 2)
-
         # draw a box around the object
         min_row=int(i.relative_min_row()*original_rows)
         min_col=int(i.relative_min_col()*original_cols)
         max_row=int(i.relative_max_row()*original_rows)
         max_col=int(i.relative_max_col()*original_cols)
         cv2.rectangle(picture_out, (min_col, min_row), (max_col, max_row), (0, 0, 255), 2)
-        #cv2.rectangle(picture_out, (100, 200), (200, 400), (0, 0, 255), 2)
 
-        print ("Alt: ", round(alt,2), "Azimuth: ", round(azimuth,2), "Relative Area: ", round(area,4), "Aspect Ratio: ", round(aspect_ratio,2), "Perimeter: ", i.perimeter, "Distance, m: ", round(distance,3))
+    #    print ("Alt: ", round(alt,2), "Azimuth: ", round(azimuth,2), "Relative Area: ", round(area,4), "Aspect Ratio: ", round(aspect_ratio,2), "Perimeter: ", i.perimeter, "Distance, m: ", round(distance,3))
 
 
     return picture_out
@@ -221,7 +209,7 @@ def search_for_boxes(picture_in, acceleration, animate):
 #picture = cv2.imread("C:\Users/20jgrassi\Pictures\Camera Roll\edited.jpg")
 
 cap = cv2.VideoCapture(1)
-#cap.set(cv2.CAP_PROP_SETTINGS, 1) #to fix things
+cap.set(cv2.CAP_PROP_SETTINGS, 1) #to fix things
 while True:
 
     picture = take_picture2(cap)
