@@ -1,10 +1,9 @@
 # file last changed on 10February2018
-
 import numpy
 import cv2
 import time
 import copy
-
+import PyWinMouse
 
 #######################################################################################################################
 
@@ -29,6 +28,16 @@ def take_picture(show, device_number):
         cv2.imshow("take picture", picture)
         cv2.waitKey(3000)
         cap.release()
+
+    return picture
+
+##################################################################################################################
+'''takes picture'''
+
+def take_picture2(stream):
+
+
+    ret, picture = stream.read()
 
     return picture
 
@@ -69,8 +78,8 @@ def in_range(picture, row, col, radius):
         for check_col in range(col-radius, col+radius, 1):
             # makes sure pixel is within bounds of picture
             if ((check_row >= 0) and (check_col>=0) and (check_row<rows) and (check_col<cols)):
-                 distance = numpy.sqrt((row-check_row)**2 + (col-check_col)**2)
-                 if distance<=radius+0.5:
+                distance = numpy.sqrt((row - check_row) ** 2 + (col - check_col) ** 2)
+                if distance<=radius+0.5:
                      coords_to_check.append(copy.copy([check_row, check_col]))
 
     for list_index in range(0, len(coords_to_check), 1):
@@ -100,7 +109,7 @@ def obliterate(picture, row, col, radius):
         for check_col in range(col - radius, col + radius, 1):
              #makes sure pixel is within bounds of picture
              if ((check_row<rows) and (check_col<cols)) and (check_row>=0 and check_col>=0):
-                 distance = numpy.sqrt((check_row-row)**2 + (check_col-col)**2)
+                 distance = numpy.sqrt((row - check_row) ** 2 + (col - check_col) ** 2)
                  if distance<=radius:
                      return_picture[check_row, check_col]=0
 
@@ -116,20 +125,22 @@ def hollow_out(picture):
 
     working=copy.copy(picture)
 
-    rows, cols = working.shape
+    kernel=numpy.ones((2,2),numpy.uint8)
+    working=cv2.morphologyEx(working,cv2.MORPH_GRADIENT,kernel)
 
-    for row in range(1, rows - 2, 1):
-        for col in range(1, cols - 2, 1):
-            if (picture[row,col]==255):
-                if(picture[row,col-1]==255):
-                    if(picture[row,col+1]==255):
-                        if(picture[row-1,col]==255):
-                            if(picture[row-1,col-1]==255):
-                                if(picture[row-1,col+1]==255):
-                                    if(picture[row+1,col]==255):
-                                        if(picture[row+1,col-1]==255):
-                                            if(picture[row+1,col+1]==255):
-                                                working[row,col]=0
+#    rows, cols = working.shape
+#    for row in range(1, rows - 2, 1):
+#        for col in range(1, cols - 2, 1):
+#            if (picture[row,col]==255):
+#                if(picture[row,col-1]==255):
+#                    if(picture[row,col+1]==255):
+#                        if(picture[row-1,col]==255):
+#                           if(picture[row-1,col-1]==255):
+#                                if(picture[row-1,col+1]==255):
+#                                   if(picture[row+1,col]==255):
+#                                      if(picture[row+1,col-1]==255):
+#                                        if(picture[row+1,col+1]==255):
+#                                               working[row,col]=0
 
 
 
@@ -167,13 +178,68 @@ class object_info_class(object):
         def aspect_ratio(self):
             return float(self.max_row[0]-self.min_row[0]+1)/(self.max_col[1]-self.min_col[1]+1)
 
-#######################################################################################################################
+        def relative_width(self):
+            return float((self.max_col[1] - self.min_col[1] + 1) / (1.0 * self.source_dimensions[1]))
 
+        def relative_height(self):
+            return float((self.max_row[0] - self.min_row[0] + 1) / (1.0 * self.source_dimensions[0]))
+
+        def relative_center_row(self):
+            return float(1.0*self.center_RC[0]/self.source_dimensions[0])
+
+        def relative_center_col(self):
+            return float(1.0*self.center_RC[1]/self.source_dimensions[1])
+
+        def relative_min_row(self):
+            return float(1.0*self.min_row[0]/self.source_dimensions[0])
+
+        def relative_min_col(self):
+            return float(1.0*self.min_col[1]/self.source_dimensions[1])
+
+        def relative_max_row(self):
+            return float(1.0*self.max_row[0]/self.source_dimensions[0])
+
+        def relative_max_col(self):
+            return float(1.0*self.max_col[1]/self.source_dimensions[1])
+
+
+
+
+#######################################################################################################################
+# this is a faster version of find_objects
+
+def find_objects_fast(picture):
+
+    object_info = object_info_class()
+    object_info_list = []
+
+    rows, cols = picture.shape
+
+    # find the contours - regions of white - in the image
+    im2, contours, hierarchy = cv2.findContours(picture, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    for contour in contours:
+        object_info.source_dimensions = [rows, cols]
+        object_info.perimeter=cv2.arcLength(contour,True)
+
+        object_info.max_row=tuple(contour[contour[:,:,1].argmax()][0])
+        object_info.max_col=tuple(contour[contour[:,:,0].argmax()][0])
+        object_info.min_row=tuple(contour[contour[:,:,1].argmin()][0])
+        object_info.min_col=tuple(contour[contour[:,:,0].argmin()][0])
+
+        x, y, w, h = cv2.boundingRect(contour)
+        object_info.center_RC = [y + (h / 2), x + (w / 2)]
+
+        object_info_list.append(object_info)
+
+    return object_info_list
+
+#######################################################################################################################
 # Given a true/false bitmap and a search radius, this locates discrete blobs
 # by tracing their outlines with accuracy of search_radius, and
 # returns a list (object_info_list) of 'object_info_class'
 
-def find_objects(picture, search_radius):
+def find_objects(picture, search_radius, animate):
     object_info = object_info_class()
     object_info_list = []
 
@@ -219,9 +285,11 @@ def find_objects(picture, search_radius):
                     elif check_col<object_info.min_col[1]:
                         object_info.min_col=[check_row,check_col]
 
-                    working_image[check_row,check_col] = 0
-                    cv2.imshow("working", working_image)
-                    cv2.waitKey(1)
+                    working_image[check_row, check_col] = 0
+
+                    if (animate!=0):
+                        cv2.imshow("working", working_image)
+                        cv2.waitKey(1)
 
                     # find all the pixels within a radius
                     close_by=in_range(working_image,check_row,check_col, search_radius)
@@ -406,36 +474,45 @@ def sort_object_info_list(unsorted_list, sort_by):
 # this is intended as a tool to held with object identification
 # to exit the function, the user enters a negative X location
 
-
 def get_pixel_values(picture):
 
     [rows, cols, depth] = picture.shape
 
     run_again=True
+    rel_row = 50
+    rel_col = 50
+
+    old_col, old_row = PyWinMouse.Mouse().get_mouse_pos()
 
     while run_again:
-        print("Input X, Y as 0-100%:")
-        rel_col, rel_row = input()
+        time.sleep(0.25)
 
-        if (rel_col>0):
-            #convert from relative position to absolute row and colmn
-            rel_col=float(1.0*rel_col/100)
-            abs_col=cols*rel_col
-            abs_col=int(abs_col)
+        new_col, new_row = PyWinMouse.Mouse().get_mouse_pos()
 
-            rel_row=float(1.0*rel_row/100)
-            rel_row=1-rel_row
-            abs_row=rows*rel_row
-            abs_row=int(abs_row)
+        rel_col=+0.25*(new_col-old_col)
+        rel_row=+0.25*(new_row-old_row)
 
-            if (abs_row<rows and abs_col<cols):
-                working=copy.copy(picture)
-                cv2.circle(working,(abs_col,abs_row),5,(0,0,255),1)
-                cv2.imshow("location", working)
-                cv2.waitKey(100)
-                print(picture[abs_row, abs_col])
-        else:
-            run_again = False
+        if (rel_row<0):
+            rel_row=0
+        elif rel_row>100:
+            rel_row=100
+
+        if (rel_col<0):
+            rel_col=0
+        elif rel_col>100:
+            rel_col=100
+
+        #convert from relative position to absolute row and colmn
+        abs_col=int(cols*1.0*rel_col/100)
+
+        abs_row=int(rows*1.0*rel_row/100)
+
+        if (abs_row>=0 and abs_row<rows and abs_col>=0 and abs_col<cols):
+             working=copy.copy(picture)
+             cv2.circle(working,(abs_col,abs_row),5,(0,0,255),2)
+             cv2.imshow("location", working)
+             cv2.waitKey(10)
+             print(picture[abs_row, abs_col])
 
 
 #######################################################################################################################

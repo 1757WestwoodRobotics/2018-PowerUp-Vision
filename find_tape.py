@@ -1,70 +1,171 @@
 from westwood_vision_tools import *
 import numpy
+#from publish_data import *
+
+
+##################################################################################################################
+# given an object list of what is supposed to be boxes, this checks the list and removes objects
+# from the list that are not likely to be boxes
+
+def check_tape_object_list(list_in):
+
+    list_out=copy.copy(list_in)
+
+    index=0
+    while index<len(list_out):
+
+        # the box is square and should have an aspect ratio near 1
+        if (list_out[index].relative_area()<0.00015): # require a minimum size
+            list_out.pop(index)
+        else:
+            index+=1
+
+    return list_out
+
+######################################################################################################################
+# this attempts to figure out the distance to the box in meters based on how much of the relative area it consumes,
+# this is is very dependent on the camera being used
+
+def distance_to_tape_meters(box_object_info):
+
+    area=box_object_info.relative_area()
+    distance_meters=0.429*numpy.power(area,-0.443)
+
+    return distance_meters
+
+######################################################################################################################
+
+def report_tape_info_to_jetson(box_info):
+
+    x, y = box_info.normalized_center()
+    alt, azimuth = altAzi(x, y, 22.5, 23)
+    area = box_info.relative_area()
+    aspect_ratio = box_info.aspect_ratio()
+    distance = distance_to_tape_meters(box_info)
+
+    publish_network_value("altitude", alt)
+    publish_network_value("azimuth",  azimuth)
+    publish_network_value("distance, m",  distance)
+
+
+######################################################################################################################
+
+#init_network_tables()
+
+def search_for_tape(picture_in, acceleration, animate):
+
+    picture_out=copy.copy(picture_in)
+
+    original_rows, original_cols, layers = picture_in.shape
+
+    # remove pixels that aren't
+    chatter_size=10
+    # fill out pixels that are in clusters
+    engorge_size=10
+
+    #if this is too slow, make the picture smaller
+    if (acceleration>1.0):
+        scaling_factor=1.0/numpy.sqrt(acceleration)
+        working_picture=cv2.resize(picture_in, (0,0), fx=scaling_factor, fy=scaling_factor)
+        chatter_size=int(chatter_size*scaling_factor)
+        if (chatter_size<2):
+            chatter_size=2
+        engorge_size=int(engorge_size*scaling_factor)
+        if (engorge_size<2):
+            engorge_size=2
+    else:
+        working_picture=copy.copy(picture_in)
+
+    working_picture = cv2.cvtColor(working_picture, cv2.COLOR_BGR2HSV)
+    working_picture=cv2.bilateralFilter(working_picture,10,150,150)
+
+    working_rows, working_cols, layers = working_picture.shape
+
+    #create an intial mask where evertying is false
+    mask=numpy.zeros((working_rows,working_cols),numpy.uint8)
+
+    #check each pixel and determine if it's color profile is that of a box
+    for row in range (0, working_rows-1, 1):
+        for col in range (0, working_cols-1, 1):
+            color=working_picture[row,col]
+
+            # if the value of the 1st component is within the expected range
+            # then check the other two color components
+            if ((color[0]>100) and (color[0]<120) and color[1] < 250 and color[1] > 50 and color[2] < 250 and color[2] > 50):
+                # given the value of the first color component, calculate what
+                # the other two should be if this is a box
+                #tar1 = .0055 * color[1]**2 - .641 * color[1] + 53.1
+                #tar3 = .83 * color[1] + 9.11
+                #if (abs(color[0] - tar1) < 24) and (abs(color[2] - tar3) < 24):
+                mask[row, col] = 255
+
+
+    #show_picture("first",picture,5000)
+
+    #low=  numpy.array([255, 255,255])
+    #high= numpy.array([255, 255,255])
+    #mask = cv2.inRange(picture, low, high)
+
+    mask=remove_chatter(mask,chatter_size)
+    mask=remove_spurious_falses(mask,engorge_size)
+
+    #show_picture("post chatter",mask,5000)
+
+    object_list = find_objects(mask, 3, animate)
+
+    # remove items from the list that are probably just noise or not boxes
+    object_list=check_tape_object_list(object_list)
+
+    object_list = sort_object_info_list(object_list, 0)
+
+    for i in object_list:
+        x, y = i.normalized_center()
+        alt, azimuth = altAzi(x,y,22.5,23)
+        area= i.relative_area()
+        aspect_ratio = i.aspect_ratio()
+        distance=distance_to_tape_meters(i)
+        #  report_box_info_to_jetson(i)
+
+        #draw a circle around the center of the object
+        abs_col=int(i.relative_center_col()*original_cols)
+        abs_row=int(i.relative_center_row()*original_rows)
+        abs_width=int(i.relative_width()*original_cols)
+        abs_height=int(i.relative_height()*original_rows)
+        if (abs_width>abs_height):
+            radius=int(abs_width/2)
+        else:
+            radius=int(abs_height/2)
+        cv2.circle(picture_out, (abs_col, abs_row), radius, (0, 0, 255), 1)
+
+        height=int(i.relative_height()*original_rows)
+        min_row=int(i.relative_center_row()*original_rows-height/2)
+        max_row=int(i.relative_center_row()*original_rows+height/2)
+        width=int(i.relative_width()*original_cols)
+        min_col=int(i.relative_center_col()*original_cols-width/2)
+        max_col=int(i.relative_center_col()*original_cols+width/2)
+        cv2.rectangle(picture_out, (min_col, min_row), (max_col, max_row), (0, 0, 255), 2)
+
+        # I have no idea why this doesn't work
+        #min_row=int(i.relative_min_row()*original_rows)
+        #min_col=int(i.relative_min_col()*original_cols)
+        #max_row=int(i.relative_max_row()*original_rows)
+        #max_col=int(i.relative_max_col()*original_cols)
+        #cv2.rectangle(picture_out, (min_col, min_row), (max_col, max_row), (0, 0, 255), 2)
+        #cv2.rectangle(picture_out, (100, 200), (200, 400), (0, 0, 255), 2)
+
+        print ("Alt: ", round(alt,2), "Azimuth: ", round(azimuth,2), "Relative Area: ", round(area,4), "Aspect Ratio: ", round(aspect_ratio,2), "Perimeter: ", i.perimeter, "Distance, m: ", round(distance,3))
+
+
+    return picture_out
 
 
 
-picture = take_picture(True, 1)
-#hsv = cv2.cvtColor(picture, cv2.COLOR_BGR2HSV)
 
-picture=cv2.bilateralFilter(picture,10,150,150)
-#hsv=cv2.bilateralFilter(hsv,10,150,150)
-#show_picture("original",picture,2000)
-#show_picture("hsv",hsv,2000)
+###################################################################################################
 
-
-rows, cols, layers = picture.shape
-
-#create an intial mask where evertying is false
-mask=numpy.zeros((rows,cols),numpy.uint8)
-
-for row in range (0, rows-1, 1):
-    for col in range (0, cols-1, 1):
-        color=picture[row,col]
-        #target_ratio=[]
-
-        #if (color[1]>20 and color[1]<60):
-         #   target_ratio = numpy.array([2.56, 2.41])
-        #elif (color[1]>=60 and color[1]<120):
-        #    target_ratio=numpy.array([2.0, 1.8])
-
-        #if len(target_ratio)>0:
-        #    pixel_ratio=numpy.array([(float(1.0*color[1]/color[0])), float((1.0*color[2]/color[0]))])
-        #    distance=euclidian_distance(target_ratio, pixel_ratio)
-        #    if (abs(distance<1)):
-        #        mask[row,col]=255
-
-        ##THESE DONT REALLY WORK
-        tar2 = .0033 * (color[0] **2) + 0.223 *  color[0]  + 33.2
-        tar3 = .00451 * (color[0] **2) + .149 * color[0] + 43.8
-        if (abs(color[1] - tar2) < 30) and (abs(color[2] - tar3) < 30):
-            mask[row, col] = 255
-
-
-#show_picture("first",picture,5000)
-
-#low=  numpy.array([20, 60,60])
-#high= numpy.array([70, 100,100])
-low=  numpy.array([255, 255,255])
-high= numpy.array([255, 255,255])
-#mask = cv2.inRange(picture, low, high)
-
-mask=remove_chatter(mask,10)
-mask=remove_spurious_falses(mask,3)
-
-#show_picture("post chatter",mask,5000)
-
-objects_list = find_objects(mask, 5)
-objects_list = sort_object_info_list(objects_list, 0)
-
-for i in objects_list:
-    #row, col = i.center
-    #x, y = centerCoordinates(mask, row, col)
-    x, y = i.normalized_center()
-    alt, azimuth = altAzi(x,y,22.5,23)
-    area= i.relative_area()
-    aspect_ratio = i.aspect_ratio()
-    print ("Alt: ", round(alt,2), "Azimuth: ", round(azimuth,2), "Relative Area: ", round(area,3), "Aspect Ratio: ", round(aspect_ratio,2), "Perimeter: ", i.perimeter)
-
-
-
-
+picture = take_picture(False, 1)
+start_time=time.time()
+searched=search_for_tape(picture,20, False)
+stop_time=time.time()
+print(stop_time-start_time)
+show_picture("processed",searched,10000)
