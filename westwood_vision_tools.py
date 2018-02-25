@@ -4,6 +4,8 @@ import cv2
 import time
 import copy
 import PyWinMouse
+import math
+
 
 #######################################################################################################################
 
@@ -489,8 +491,8 @@ def get_pixel_values(picture):
 
         new_col, new_row = PyWinMouse.Mouse().get_mouse_pos()
 
-        rel_col=+0.25*(new_col-old_col)
-        rel_row=+0.25*(new_row-old_row)
+        rel_col=+0.075*(new_col-old_col)
+        rel_row=+0.075*(new_row-old_row)
 
         if (rel_row<0):
             rel_row=0
@@ -522,3 +524,23 @@ def euclidian_distance(one, two):
     distance=numpy.linalg.norm(one-two)
 
     return distance
+
+
+#####################################################################################################################
+
+
+def two_source_distance(separation_m, angle1_deg, angle2_deg):
+    """given two viewpoints where being to the left of the viewpoint is considered a negative angle and right is positive, calculates
+     distance to an object in meters"""
+    a1_rad = numpy.deg2rad(angle1_deg)
+    a2_rad = numpy.deg2rad(angle2_deg)
+    x = separation_m
+    r1 = -((x/math.tan(a1_rad)* math.sin(a2_rad))/math.sin(a1_rad - a2_rad) + x/math.sin(a1_rad))
+    r2 = -((x/math.tan(a1_rad)* math.sin(math.pi - a1_rad))/math.sin(a1_rad - a2_rad))
+    distance_m = [r1, r2]
+
+    return distance_m
+
+
+thing = two_source_distance(10, 10, -10)
+ 

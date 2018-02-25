@@ -74,12 +74,16 @@ def distance_to_box_meters(box_object_info):
     aspect_ratio=box_object_info.aspect_ratio()
 
     if ((aspect_ratio>0) and (aspect_ratio<1)):
-        aspect_ratio/=1
+        aspect_ratio=float(1/aspect_ratio)
 
+
+    aspect_ratio = round(aspect_ratio)
     if (aspect_ratio>0):
         area = box_object_info.relative_area()
         area=float(area/aspect_ratio)
-        distance_meters=0.429*numpy.power(area,-0.443)
+        #distance_meters = 0.429 * numpy.power(area, -0.443)
+        # area should drop with the square of the distance
+        distance_meters = 0.429 * numpy.power(area, -0.5)
     else:
         distance_meters=-1
 
@@ -87,7 +91,7 @@ def distance_to_box_meters(box_object_info):
 
 ######################################################################################################################
 
-def report_box_info_to_jetson(box_info):
+def report_box_info_to_table(box_info, table):
 
     x, y = box_info.normalized_center()
     alt, azimuth = altAzi(x, y, 22.5, 23)
@@ -95,14 +99,13 @@ def report_box_info_to_jetson(box_info):
     aspect_ratio = box_info.aspect_ratio()
     distance = distance_to_box_meters(box_info)
 
-    publish_network_value("altitude", alt)
-    publish_network_value("azimuth",  azimuth)
-    publish_network_value("distance, m",  distance)
+    publish_network_value("altitude", alt, table)
+    publish_network_value("azimuth",  azimuth, table)
+    publish_network_value("distance, m",  distance, table)
 
 
 ######################################################################################################################
 
-#init_network_tables()
 
 def search_for_boxes(picture_in, acceleration, animate):
 
@@ -195,7 +198,7 @@ def search_for_boxes(picture_in, acceleration, animate):
         max_col=int(i.relative_max_col()*original_cols)
         cv2.rectangle(picture_out, (min_col, min_row), (max_col, max_row), (0, 0, 255), 2)
 
-    #    print ("Alt: ", round(alt,2), "Azimuth: ", round(azimuth,2), "Relative Area: ", round(area,4), "Aspect Ratio: ", round(aspect_ratio,2), "Perimeter: ", i.perimeter, "Distance, m: ", round(distance,3))
+        print ("Alt: ", round(alt,2), "Azimuth: ", round(azimuth,2), "Relative Area: ", round(area,4), "Aspect Ratio: ", round(aspect_ratio,2), "Perimeter: ", i.perimeter, "Distance, m: ", round(distance,3))
 
 
     return picture_out
@@ -207,6 +210,8 @@ def search_for_boxes(picture_in, acceleration, animate):
 
 #picture = take_picture(False, 1)
 #picture = cv2.imread("C:\Users/20jgrassi\Pictures\Camera Roll\edited.jpg")
+#networktableee = init_network_tables()
+
 
 cap = cv2.VideoCapture(1)
 cap.set(cv2.CAP_PROP_SETTINGS, 1) #to fix things
