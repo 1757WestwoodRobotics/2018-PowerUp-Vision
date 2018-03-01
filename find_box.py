@@ -1,45 +1,7 @@
 from westwood_vision_tools import *
 import numpy
-#from publish_data import *
+from publish_data import *
 
-##################################################################################################################
-# this gets rid of a "box" if it is entirely within the area of another box
-
-def remove_box_in_a_box(list_in):
-
-    list_out=copy.copy(list_in)
-
-    # do one pass then reverse the list and do another
-    # this addresses the a in b and b in a condition
-    for thing in range (0,2,1):
-        # start at the end of the list and work to the from
-        last_index=len(list_out)-1
-
-        while(last_index>0):
-            check_index=0
-            check_next=True
-            while (check_next):
-
-                check_object=list_out[check_index]
-                last_object=list_out[last_index]
-
-                if (check_object.relative_max_row()>last_object.relative_max_row() and
-                    check_object.relative_max_col()>last_object.relative_max_col() and
-                    check_object.relative_min_row()<last_object.relative_min_row() and
-                    check_object.relative_min_col()<last_object.relative_min_col()):
-                    list_out.pop(last_index)
-                    check_next=False
-                else:
-                    check_index+=1
-
-                if (check_index>=last_index):
-                    check_next=False
-
-            last_index-=1
-
-        list_out.reverse()
-
-    return list_out
 
 ##################################################################################################################
 # given an object list of what is supposed to be boxes, this checks the list and removes objects
@@ -70,12 +32,11 @@ def distance_to_box_meters(box_object_info):
 
     # because several boxes could be pushed against each other, make a guess
     # that aspect ratios of 2:1, 3:1 etc. are multiple boxes in a row
-    # this is very crude and assumes that the boxe aren't stacked
+    # this is very crude
     aspect_ratio=box_object_info.aspect_ratio()
 
     if ((aspect_ratio>0) and (aspect_ratio<1)):
         aspect_ratio=float(1/aspect_ratio)
-
 
     aspect_ratio = round(aspect_ratio)
     if (aspect_ratio>0):
@@ -107,7 +68,7 @@ def report_box_info_to_table(box_info, table):
 ######################################################################################################################
 
 
-def search_for_boxes(picture_in, acceleration, animate):
+def search_for_boxes(picture_in, acceleration, animate, table):
 
     picture_out=copy.copy(picture_in)
 
@@ -167,7 +128,7 @@ def search_for_boxes(picture_in, acceleration, animate):
         object_list = find_objects(mask, 3, animate)
 
     # remove items from the list that are probably just noise or not boxes
-    #object_list=check_box_object_list(object_list)
+    object_list=check_box_object_list(object_list)
     object_list=remove_box_in_a_box(object_list)
 
     object_list = sort_object_info_list(object_list, 0)
@@ -178,7 +139,7 @@ def search_for_boxes(picture_in, acceleration, animate):
         area= i.relative_area()
         aspect_ratio = i.aspect_ratio()
         distance=distance_to_box_meters(i)
-        #  report_box_info_to_jetson(i)
+        report_box_info_to_table(i, table)
 
         #draw a circle around the center of the object
         abs_col=int(i.relative_center_col()*original_cols)
@@ -189,14 +150,17 @@ def search_for_boxes(picture_in, acceleration, animate):
             radius=int(abs_width/2)
         else:
             radius=int(abs_height/2)
-        cv2.circle(picture_out, (abs_col, abs_row), radius, (0, 0, 255), 1)
 
-        # draw a box around the object
-        min_row=int(i.relative_min_row()*original_rows)
-        min_col=int(i.relative_min_col()*original_cols)
-        max_row=int(i.relative_max_row()*original_rows)
-        max_col=int(i.relative_max_col()*original_cols)
-        cv2.rectangle(picture_out, (min_col, min_row), (max_col, max_row), (0, 0, 255), 2)
+        # if the box has an actual width
+        if (radius>=1):
+            cv2.circle(picture_out, (abs_col, abs_row), radius, (0, 0, 255), 1)
+
+            # draw a box around the object
+            min_row=int(i.relative_min_row()*original_rows)
+            min_col=int(i.relative_min_col()*original_cols)
+            max_row=int(i.relative_max_row()*original_rows)
+            max_col=int(i.relative_max_col()*original_cols)
+            cv2.rectangle(picture_out, (min_col, min_row), (max_col, max_row), (0, 0, 255), 2)
 
         print ("Alt: ", round(alt,2), "Azimuth: ", round(azimuth,2), "Relative Area: ", round(area,4), "Aspect Ratio: ", round(aspect_ratio,2), "Perimeter: ", i.perimeter, "Distance, m: ", round(distance,3))
 
@@ -210,16 +174,21 @@ def search_for_boxes(picture_in, acceleration, animate):
 
 #picture = take_picture(False, 1)
 #picture = cv2.imread("C:\Users/20jgrassi\Pictures\Camera Roll\edited.jpg")
-#networktableee = init_network_tables()
+table = init_network_tables()
 
 
 cap = cv2.VideoCapture(1)
-cap.set(cv2.CAP_PROP_SETTINGS, 1) #to fix things
+#cap.set(cv2.CAP_PROP_SETTINGS, 1) #to fix things
+cap.set(cv2.CAP_PROP_BRIGHTNESS, 30)
+cap.set(cv2.CAP_PROP_EXPOSURE, -7)
+cap.set(cv2.CAP_PROP_CONTRAST, 5)
+cap.set(cv2.CAP_PROP_SATURATION, 83)
+
 while True:
 
     picture = take_picture2(cap)
     #start_time = time.time()
-    searched=search_for_boxes(picture,10, False)
+    searched=search_for_boxes(picture,10, False, table)
     #stop_time=time.time()
     #print(stop_time-start_time)
     show_picture("processed",searched,10)

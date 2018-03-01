@@ -469,6 +469,45 @@ def sort_object_info_list(unsorted_list, sort_by):
 
     return sorted_list
 
+##################################################################################################################
+# given an object info list, this gets rid of a "box" if it is entirely within the area of another box
+
+def remove_box_in_a_box(list_in):
+
+    list_out=copy.copy(list_in)
+
+    # do one pass then reverse the list and do another
+    # this addresses the a in b and b in a condition
+    for thing in range (0,2,1):
+        # start at the end of the list and work to the front
+        last_index=len(list_out)-1
+
+        while(last_index>0):
+            check_index=0
+            check_next=True
+            while (check_next):
+
+                check_object=list_out[check_index]
+                last_object=list_out[last_index]
+
+                if (check_object.relative_max_row()>last_object.relative_max_row() and
+                    check_object.relative_max_col()>last_object.relative_max_col() and
+                    check_object.relative_min_row()<last_object.relative_min_row() and
+                    check_object.relative_min_col()<last_object.relative_min_col()):
+                    list_out.pop(last_index)
+                    check_next=False
+                else:
+                    check_index+=1
+
+                if (check_index>=last_index):
+                    check_next=False
+
+            last_index-=1
+
+        list_out.reverse()
+
+    return list_out
+
 #######################################################################################################################
 
 # given a picture, this allows the user to select a locations on the picture and reports the three color
@@ -543,4 +582,3 @@ def two_source_distance(separation_m, angle1_deg, angle2_deg):
 
 
 thing = two_source_distance(10, 10, -10)
- 

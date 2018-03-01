@@ -1,11 +1,10 @@
 import cv2
 import numpy as np
-from networktables import NetworkTables
-#from publish_data import *
+from publish_data import *
 
 
 #### Camera settings on the lab PC:
-#brightness 30; contrast 10; saturation 200; sharpness 25, white balance auto; exposure -11;
+#brightness 30; contrast 10; saturation 200; sharpness 25, white balance auto; exposure -10;
 
 
 
@@ -13,7 +12,7 @@ from networktables import NetworkTables
 camera = cv2.VideoCapture(1)
 camera.set(cv2.CAP_PROP_SETTINGS, 1) #to fix things
 
-#init_network_tables()
+table = init_network_tables()
 
 
 bang = False
@@ -28,7 +27,7 @@ while True:
     retval, img = camera.read()
 
     # threshold the image based on RGV values (BGR)
-    threshold_image = cv2.inRange(img, (75, 160, 0), (120, 200, 50))
+    threshold_image = cv2.inRange(img, (20, 80, 0), (120, 200, 50))
     if not headless:
         cv2.imshow("Threshold", threshold_image)
 
@@ -65,6 +64,8 @@ while True:
 
     # do something with the centers
 
+
+
     if not headless:
         cv2.imshow("Contours", img)
 
@@ -72,9 +73,9 @@ while True:
         cv2.imshow("Contours", img)
 
     centers = good_centers
-    #publish_network_value('x', coordx)
-    #publish_network_value('y', coordy)
-    #print('tape:', read_network_value('x'), read_network_value('y'))
+    publish_network_value('x', coordx, table)
+    publish_network_value('y', coordy, table)
+    print('tape:', read_network_value('x', table), read_network_value('y', table))
 
     # add a waitkey so the rendered windows buffers
     cv2.waitKey(10)

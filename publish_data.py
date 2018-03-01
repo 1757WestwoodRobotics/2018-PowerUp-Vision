@@ -25,8 +25,8 @@ def publish_network_value(key, value, table):
 ##############################################################################################################
 
 # Small test script to run. Needs time to connect and publish data.
-while True:
-    table = init_network_tables()
-    read_network_value('Test', table)
-    publish_network_value('ABC', 104.5, table)
+# while True:
+#     table = init_network_tables()
+#     read_network_value('Test', table)
+#     publish_network_value('ABC', 104.5, table)
 

@@ -1,6 +1,6 @@
 from westwood_vision_tools import *
 import numpy
-#from publish_data import *
+from publish_data import *
 
 
 ##################################################################################################################
@@ -15,7 +15,7 @@ def check_tape_object_list(list_in):
     while index<len(list_out):
 
         # the box is square and should have an aspect ratio near 1
-        if (list_out[index].relative_area()<0.00015): # require a minimum size
+        if (list_out[index].relative_area()<0.0007): # require a minimum size
             list_out.pop(index)
         else:
             index+=1
@@ -29,30 +29,29 @@ def check_tape_object_list(list_in):
 def distance_to_tape_meters(box_object_info):
 
     area=box_object_info.relative_area()
-    distance_meters=0.429*numpy.power(area,-0.443)
+    distance_meters=0.204*numpy.power(area,-0.5)
 
     return distance_meters
 
 ######################################################################################################################
 
-def report_tape_info_to_jetson(box_info):
+def report_tape_info_to_jetson(object_info, table):
 
-    x, y = box_info.normalized_center()
+    x, y = object_info.normalized_center()
     alt, azimuth = altAzi(x, y, 22.5, 23)
-    area = box_info.relative_area()
-    aspect_ratio = box_info.aspect_ratio()
-    distance = distance_to_tape_meters(box_info)
+    area = object_info.relative_area()
+    aspect_ratio = object_info.aspect_ratio()
+    distance = distance_to_tape_meters(object_info)
 
-    publish_network_value("altitude", alt)
-    publish_network_value("azimuth",  azimuth)
-    publish_network_value("distance, m",  distance)
+    publish_network_value("altitude", alt, table)
+    publish_network_value("azimuth",  azimuth, table)
+    publish_network_value("distance, m",  distance, table)
 
 
 ######################################################################################################################
 
-#init_network_tables()
 
-def search_for_tape(picture_in, acceleration, animate):
+def search_for_tape(picture_in, acceleration, animate, table):
 
     picture_out=copy.copy(picture_in)
 
@@ -76,96 +75,69 @@ def search_for_tape(picture_in, acceleration, animate):
     else:
         working_picture=copy.copy(picture_in)
 
-    working_picture = cv2.cvtColor(working_picture, cv2.COLOR_BGR2HSV)
-    working_picture=cv2.bilateralFilter(working_picture,10,150,150)
+    working_picture = cv2.bilateralFilter(working_picture, 10, 150, 150)
 
-    working_rows, working_cols, layers = working_picture.shape
-
-    #create an intial mask where evertying is false
-    mask=numpy.zeros((working_rows,working_cols),numpy.uint8)
-
-    #check each pixel and determine if it's color profile is that of a box
-    for row in range (0, working_rows-1, 1):
-        for col in range (0, working_cols-1, 1):
-            color=working_picture[row,col]
-
-            # if the value of the 1st component is within the expected range
-            # then check the other two color components
-            if ((color[0]>100) and (color[0]<120) and color[1] < 250 and color[1] > 50 and color[2] < 250 and color[2] > 50):
-                # given the value of the first color component, calculate what
-                # the other two should be if this is a box
-                #tar1 = .0055 * color[1]**2 - .641 * color[1] + 53.1
-                #tar3 = .83 * color[1] + 9.11
-                #if (abs(color[0] - tar1) < 24) and (abs(color[2] - tar3) < 24):
-                mask[row, col] = 255
-
-
-    #show_picture("first",picture,5000)
-
-    #low=  numpy.array([255, 255,255])
-    #high= numpy.array([255, 255,255])
-    #mask = cv2.inRange(picture, low, high)
-
-    mask=remove_chatter(mask,chatter_size)
-    mask=remove_spurious_falses(mask,engorge_size)
-
-    #show_picture("post chatter",mask,5000)
+    # threshold the image based on RGV values (BGR)
+    mask = cv2.inRange(working_picture, (20, 80, 0), (120, 200, 50))
+  #  mask = remove_chatter(mask, chatter_size)
+  #  mask = remove_spurious_falses(mask, engorge_size)
 
     object_list = find_objects(mask, 3, animate)
-
-    # remove items from the list that are probably just noise or not boxes
-    object_list=check_tape_object_list(object_list)
-
+    object_list = check_tape_object_list(object_list)
+    object_list = remove_box_in_a_box(object_list)
     object_list = sort_object_info_list(object_list, 0)
 
     for i in object_list:
         x, y = i.normalized_center()
-        alt, azimuth = altAzi(x,y,22.5,23)
-        area= i.relative_area()
+        alt, azimuth = altAzi(x, y, 22.5, 23)
+        area = i.relative_area()
         aspect_ratio = i.aspect_ratio()
-        distance=distance_to_tape_meters(i)
-        #  report_box_info_to_jetson(i)
+        distance = distance_to_tape_meters(i)
+        report_tape_info_to_jetson(i, table)
 
-        #draw a circle around the center of the object
-        abs_col=int(i.relative_center_col()*original_cols)
-        abs_row=int(i.relative_center_row()*original_rows)
-        abs_width=int(i.relative_width()*original_cols)
-        abs_height=int(i.relative_height()*original_rows)
-        if (abs_width>abs_height):
-            radius=int(abs_width/2)
+        # draw a circle around the center of the object
+        abs_col = int(i.relative_center_col() * original_cols)
+        abs_row = int(i.relative_center_row() * original_rows)
+        abs_width = int(i.relative_width() * original_cols)
+        abs_height = int(i.relative_height() * original_rows)
+        if (abs_width > abs_height):
+            radius = int(abs_width / 2)
         else:
-            radius=int(abs_height/2)
-        cv2.circle(picture_out, (abs_col, abs_row), radius, (0, 0, 255), 1)
+            radius = int(abs_height / 2)
 
-        height=int(i.relative_height()*original_rows)
-        min_row=int(i.relative_center_row()*original_rows-height/2)
-        max_row=int(i.relative_center_row()*original_rows+height/2)
-        width=int(i.relative_width()*original_cols)
-        min_col=int(i.relative_center_col()*original_cols-width/2)
-        max_col=int(i.relative_center_col()*original_cols+width/2)
-        cv2.rectangle(picture_out, (min_col, min_row), (max_col, max_row), (0, 0, 255), 2)
+        # if the box has an actual width
+        if (radius >= 1):
+            cv2.circle(picture_out, (abs_col, abs_row), radius, (0, 0, 255), 1)
 
-        # I have no idea why this doesn't work
-        #min_row=int(i.relative_min_row()*original_rows)
-        #min_col=int(i.relative_min_col()*original_cols)
-        #max_row=int(i.relative_max_row()*original_rows)
-        #max_col=int(i.relative_max_col()*original_cols)
-        #cv2.rectangle(picture_out, (min_col, min_row), (max_col, max_row), (0, 0, 255), 2)
-        #cv2.rectangle(picture_out, (100, 200), (200, 400), (0, 0, 255), 2)
+            # draw a box around the object
+            min_row = int(i.relative_min_row() * original_rows)
+            min_col = int(i.relative_min_col() * original_cols)
+            max_row = int(i.relative_max_row() * original_rows)
+            max_col = int(i.relative_max_col() * original_cols)
+            cv2.rectangle(picture_out, (min_col, min_row), (max_col, max_row), (0, 0, 255), 2)
 
-        print ("Alt: ", round(alt,2), "Azimuth: ", round(azimuth,2), "Relative Area: ", round(area,4), "Aspect Ratio: ", round(aspect_ratio,2), "Perimeter: ", i.perimeter, "Distance, m: ", round(distance,3))
+        print ("Alt: ", round(alt, 2), "Azimuth: ", round(azimuth, 2), "Relative Area: ", round(area, 4), "Aspect Ratio: ",round(aspect_ratio, 2), "Perimeter: ", i.perimeter, "Distance, m: ", round(distance, 3))
 
 
     return picture_out
 
 
-
-
 ###################################################################################################
 
-picture = take_picture(False, 1)
-start_time=time.time()
-searched=search_for_tape(picture,20, False)
-stop_time=time.time()
-print(stop_time-start_time)
-show_picture("processed",searched,10000)
+
+cap = cv2.VideoCapture(1)
+cap.set(cv2.CAP_PROP_SETTINGS, 1) #to fix things
+table = init_network_tables()
+cap.set(cv2.CAP_PROP_BRIGHTNESS, 30)
+cap.set(cv2.CAP_PROP_EXPOSURE, -10)
+cap.set(cv2.CAP_PROP_CONTRAST, 9)
+cap.set(cv2.CAP_PROP_SATURATION, 199)
+
+while True:
+
+    picture = take_picture2(cap)
+    #start_time = time.time()
+    searched=search_for_tape(picture,1, False, table)
+    #stop_time=time.time()
+    #print(stop_time-start_time)
+    show_picture("processed",searched,10)
