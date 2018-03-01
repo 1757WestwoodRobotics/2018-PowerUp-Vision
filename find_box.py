@@ -176,7 +176,7 @@ def search_for_boxes(picture_in, acceleration, animate, table):
 #picture = cv2.imread("C:\Users/20jgrassi\Pictures\Camera Roll\edited.jpg")
 table = init_network_tables()
 
-
+ 
 cap = cv2.VideoCapture(1)
 #cap.set(cv2.CAP_PROP_SETTINGS, 1) #to fix things
 cap.set(cv2.CAP_PROP_BRIGHTNESS, 30)
