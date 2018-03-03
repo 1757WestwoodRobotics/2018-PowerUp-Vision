@@ -472,7 +472,7 @@ def sort_object_info_list(unsorted_list, sort_by):
 ##################################################################################################################
 # given an object info list, this gets rid of a "box" if it is entirely within the area of another box
 
-def remove_box_in_a_box(list_in):
+def remove_object_in_object(list_in):
 
     list_out=copy.copy(list_in)
 
@@ -509,7 +509,6 @@ def remove_box_in_a_box(list_in):
     return list_out
 
 #######################################################################################################################
-
 # given a picture, this allows the user to select a locations on the picture and reports the three color
 # values associated with the location
 # this is intended as a tool to held with object identification
@@ -557,7 +556,80 @@ def get_pixel_values(picture):
 
 
 #######################################################################################################################
+# given a picture, this allows the user to select a locations on the picture and reports the three color
+# values associated with the location
+# this is intended as a tool to held with object identification
+# to exit the function, the user enters a negative X location
 
+def get_all_pixel_values(picture):
+
+    [rows, cols, depth] = picture.shape
+
+    run_again=True
+    abs_topLeftPixel=[0, 0]
+    abs_bottomRightPixel=[0, 0]
+
+    while run_again:
+        print("Input top left coordinate (row, col) will display as blue:")
+        row, col = input()
+        topLeftPixel=[row, col]
+
+        print("Input bottom right coordinate (row, col) will display as red:")
+        row, col = input()
+        bottomRightPixel=[row, col]
+
+#        bottomRightPixel = input("Input bottom right coordinate (row, col) will display as red:")
+
+        # make sure the relative coordinates are between 0 and 100%
+        if (topLeftPixel[1]<0):
+            topLeftPixel[1]=0
+        elif topLeftPixel[1]>100:
+            topLeftPixel[1]=100
+
+        if (topLeftPixel[0]<0):
+            topLeftPixel[0]=0
+        elif topLeftPixel[0]>100:
+            topLeftPixel[0]=100
+
+        if (bottomRightPixel[1]<0):
+            bottomRightPixel[1]=0
+        elif bottomRightPixel[1]>100:
+            bottomRightPixel[1]=100
+
+        if (bottomRightPixel[0]<0):
+            bottomRightPixel[0]=0
+        elif bottomRightPixel[0]>100:
+            bottomRightPixel[0]=100
+
+        if (topLeftPixel[1] > bottomRightPixel[1]):
+            topLeftPixel[1] = bottomRightPixel[1]
+
+        if (topLeftPixel[0] > bottomRightPixel[0]):
+            topLeftPixel[0] = bottomRightPixel[0]
+
+        #convert from relative position to absolute row and colmn
+        abs_topLeftPixel[1] = int(cols*1.0*topLeftPixel[1] / 100)
+        abs_topLeftPixel[0] = int(rows * 1.0 * topLeftPixel[0] / 100)
+
+        abs_bottomRightPixel[1] = int(cols * 1.0 * bottomRightPixel[1] / 100)
+        abs_bottomRightPixel[0] = int(rows * 1.0 * bottomRightPixel[0] / 100)
+
+        working=copy.copy(picture)
+        cv2.circle(working,(abs_topLeftPixel[1], abs_topLeftPixel[0]),5,(255,0,0),2)
+        cv2.circle(working, (abs_bottomRightPixel[1], abs_bottomRightPixel[0]), 5, (0, 0, 255), 2)
+        cv2.imshow("location", working)
+        cv2.waitKey(10)
+
+        happy=input("Are you happy with these coordinates (0, 1)")
+        if (happy==1):
+            run_again=False
+
+    for abs_row in range (abs_topLeftPixel[0], abs_bottomRightPixel[0], 1):
+        for abs_col in range(abs_topLeftPixel[1], abs_bottomRightPixel[1], 1):
+            print(picture[abs_row, abs_col])
+
+
+#######################################################################################################################
 def euclidian_distance(one, two):
 
     distance=numpy.linalg.norm(one-two)

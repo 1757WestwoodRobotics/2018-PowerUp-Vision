@@ -129,7 +129,7 @@ def search_for_boxes(picture_in, acceleration, animate, table):
 
     # remove items from the list that are probably just noise or not boxes
     object_list=check_box_object_list(object_list)
-    object_list=remove_box_in_a_box(object_list)
+    object_list=remove_object_in_object(object_list)
 
     object_list = sort_object_info_list(object_list, 0)
 
@@ -176,9 +176,9 @@ def search_for_boxes(picture_in, acceleration, animate, table):
 #picture = cv2.imread("C:\Users/20jgrassi\Pictures\Camera Roll\edited.jpg")
 table = init_network_tables()
 
- 
+
 cap = cv2.VideoCapture(1)
-#cap.set(cv2.CAP_PROP_SETTINGS, 1) #to fix things
+cap.set(cv2.CAP_PROP_SETTINGS, 1) #to fix things
 cap.set(cv2.CAP_PROP_BRIGHTNESS, 30)
 cap.set(cv2.CAP_PROP_EXPOSURE, -7)
 cap.set(cv2.CAP_PROP_CONTRAST, 5)

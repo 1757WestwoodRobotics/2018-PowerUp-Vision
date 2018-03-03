@@ -4,8 +4,8 @@ from publish_data import *
 
 
 ##################################################################################################################
-# given an object list of what is supposed to be boxes, this checks the list and removes objects
-# from the list that are not likely to be boxes
+# given an object list of what is supposed to be tape, this checks the list and removes objects
+# from the list that are not likely to be tape
 
 def check_tape_object_list(list_in):
 
@@ -14,8 +14,10 @@ def check_tape_object_list(list_in):
     index=0
     while index<len(list_out):
 
-        # the box is square and should have an aspect ratio near 1
-        if (list_out[index].relative_area()<0.0007): # require a minimum size
+        # the tape is rectangular and should have an aspect ratio near 8
+        if (list_out[index].aspect_ratio()<3):
+            list_out.pop(index)
+        elif (list_out[index].relative_area()<0.0007): # require a minimum size
             list_out.pop(index)
         else:
             index+=1
@@ -84,7 +86,7 @@ def search_for_tape(picture_in, acceleration, animate, table):
 
     object_list = find_objects(mask, 3, animate)
     object_list = check_tape_object_list(object_list)
-    object_list = remove_box_in_a_box(object_list)
+    object_list = remove_object_in_object(object_list)
     object_list = sort_object_info_list(object_list, 0)
 
     for i in object_list:
