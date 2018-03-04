@@ -6,7 +6,7 @@ test=0
 
 #stream = VideoCapture("gst-launch-1.0 v4l2src ! video/x-raw-yuv,width=640,height=480,framerate=15/1 ! aspectratiocrop aspect-ratio=4/3 ! ffmpegcolorspace ! videoconvert ! video/x-raw, format=(string)BGR ! appsink")
 
-stream = VideoCapture("gst-launch-1.0 v4l2src ! image/jpeg,width=640,height=480 ! appsink name=appsink")
+stream = VideoCapture(1)
 
 #stream = VideoCapture(0)
 

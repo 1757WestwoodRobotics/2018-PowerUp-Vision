@@ -33,7 +33,7 @@ echo $LD_LIBRARY_PATH
 #valgrind ./mjpg_streamer -i "./input_uvc.so" -o "./output_http.so -w ./www"
 
 
-~/mjpg-streamer/mjpg-streamer-experimental/mjpg_streamer -i "input_file.so -f /home/nvidia/Downloads/stream/out -r -d 0" -o "output_http.so -w ./www"
+~/mjpg-streamer/mjpg-streamer-experimental/mjpg_streamer -i "input_file.so -f /home/nvidia/2018-PowerUp-Vision/out -r -d 0" -o "output_http.so -w ./www"
 
 #./mjpg_streamer -i "./input_uvc.so" -o "./output_udp.so -p 2001"
 

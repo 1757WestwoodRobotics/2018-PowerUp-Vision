@@ -29,7 +29,7 @@ echo $LD_LIBRARY_PATH
 #./mjpg_streamer -i "input_uvc.so --help"
 
 #./mjpg_streamer -i "./input_uvc.so" -d "/dev/video0/" -o "./output_http.so -w ./www"
-~/mjpg-streamer/mjpg-streamer-experimental/mjpg_streamer -i "input_uvc.so -d /dev/video1" -o "output_http.so -w ./www -p 8090"
+~/mjpg-streamer/mjpg-streamer-experimental/mjpg_streamer -i "input_file.so -f /home/nvidia/2018-PowerUp-Vision/out2 -r -d 0" -o "output_http.so -w ./www -p 8090"
 #valgrind ./mjpg_streamer -i "./input_uvc.so" -o "./output_http.so -w ./www"
 
 
