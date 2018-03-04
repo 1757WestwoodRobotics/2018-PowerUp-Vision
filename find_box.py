@@ -210,6 +210,7 @@ def search_for_boxes(picture_in, acceleration, animate):
 
 cap = cv2.VideoCapture(1)
 cap.set(cv2.CAP_PROP_SETTINGS, 1) #to fix things
+cap.set(cv2.CAP_PROP_EXPOSURE, -7)
 while True:
 
     picture = take_picture2(cap)

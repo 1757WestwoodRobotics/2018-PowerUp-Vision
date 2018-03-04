@@ -3,7 +3,7 @@ import numpy
 import cv2
 import time
 import copy
-import PyWinMouse
+#import PyWinMouse
 
 #######################################################################################################################
 
@@ -482,12 +482,12 @@ def get_pixel_values(picture):
     rel_row = 50
     rel_col = 50
 
-    old_col, old_row = PyWinMouse.Mouse().get_mouse_pos()
+    #old_col, old_row = PyWinMouse.Mouse().get_mouse_pos()
 
     while run_again:
         time.sleep(0.25)
 
-        new_col, new_row = PyWinMouse.Mouse().get_mouse_pos()
+        #new_col, new_row = PyWinMouse.Mouse().get_mouse_pos()
 
         rel_col=+0.25*(new_col-old_col)
         rel_row=+0.25*(new_row-old_row)
