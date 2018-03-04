@@ -624,9 +624,41 @@ def get_all_pixel_values(picture):
         if (happy==1):
             run_again=False
 
+    list_one=[]
+    list_two=[]
+    list_three=[]
+
     for abs_row in range (abs_topLeftPixel[0], abs_bottomRightPixel[0], 1):
         for abs_col in range(abs_topLeftPixel[1], abs_bottomRightPixel[1], 1):
-            print(picture[abs_row, abs_col])
+            one, two, three = picture[abs_row, abs_col]
+            list_one.append(one)
+            list_two.append(two)
+            list_three.append(three)
+
+    mean_one=numpy.mean(list_one)
+    mean_two=numpy.mean(list_two)
+    mean_three=numpy.mean(list_three)
+
+    std_one=numpy.std(list_one)
+    std_two=numpy.std(list_two)
+    std_three=numpy.std(list_three)
+
+    mean_one = round(mean_one, 1)
+    mean_two = round(mean_two, 1)
+    mean_three = round(mean_three, 1)
+
+    std_one = round(std_one, 1)
+    std_two = round(std_two, 1)
+    std_three = round(std_three, 1)
+
+    print("Mean: one, two and three ", mean_one, mean_two, mean_three)
+    print("STD: one, two three ", std_one, std_two, std_three)
+
+    fit_two_vs_one=numpy.polyfit(list_two, list_one, 2)
+    print("Fit two (x) vs. one (y), highest order to lowest: ", fit_two_vs_one)
+
+    fit_two_vs_three=numpy.polyfit(list_two,list_three,2)
+    print("Fit two (x) vs three (y), highest order to lowest", fit_two_vs_three)
 
 
 #######################################################################################################################
